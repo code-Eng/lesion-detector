@@ -6,6 +6,7 @@ import os
 import numpy as np
 from ReNA.rena import ReNA
 import matplotlib.pyplot as plt
+import glob
 
 mask_img = nb.load('../../../stochastic_regularizer/sergul_aydore/supporting_data/grey10_icbm_2mm_bin.nii.gz')
 nifti_masker = NiftiMasker(mask_img=mask_img, smoothing_fwhm=False,
@@ -37,17 +38,27 @@ def get_single_subject(file_name):
 
     return imgs
 
-subject_list = ['TBI_INVDD132CG0', 'TBI_INVEL154CKX', 'TBI_INVEU482TRG']
 # TODO: make automated
 all_imgs = None
 dir_name = "../../sample_data/"
+subject_list = glob.glob(dir_name + 'TBI*')
+
 for subject_name in subject_list:
-    file_name = dir_name + subject_name
+    file_name = subject_name
     imgs = get_single_subject(file_name)
     if all_imgs is None:
         all_imgs = imgs
     else:
         all_imgs = np.concatenate((all_imgs, imgs))
+
+
+# print list of labels for the plot
+labels_plot = []
+for zz in subject_list:
+    # if there are other type nii.gz not wanted included as shown with 'fse.nii.gz'
+    if zz.split('/')[4][0:2] == 'fs':  # ../../sample_data/TBI*/*  >>> 0/1/2/3/4
+        continue
+    labels_plot.append(zz.split('/')[3] + '-' + zz.split('/')[4][0:2])
 
 print(all_imgs.shape)
 
@@ -69,9 +80,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.plot(mse, marker='o')
 ax.set_xticks(range(n_samples))
-ax.set_xticklabels(['TBI_INVDD132CG0-T1', 'TBI_INVDD132CG0-T2', 'TBI_INVDD132CG0-FL',
-            'TBI_INVEL154CKX-T1', 'TBI_INVEL154CKX-T2', 'TBI_INVEL154CKX-FL',
-            'TBI_INVEU482TRG-T1', 'TBI_INVEU482TRG-T2', 'TBI_INVEU482TRG-FL'], rotation=90)
+ax.set_xticklabels(labels_plot, rotation=90)
 ax.set_ylabel("MSE")
 plt.tight_layout()
 plt.show()
