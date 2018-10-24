@@ -23,6 +23,12 @@ nifti_masker = NiftiMasker(smoothing_fwhm=False,
                            standardize=False)
 nifti_masker.fit('MRI_ReNA/study_dir/TBI_INVDD132CG0/FLAIR.nii.gz')
 
+'''
+mask_img = nb.load('../../../stochastic_regularizer/sergul_aydore/supporting_data/grey10_icbm_2mm_bin.nii.gz')
+nifti_masker = NiftiMasker(mask_img=mask_img, smoothing_fwhm=False,
+                           standardize=False)
+nifti_masker.fit()'''
+
 
 def subject_checker(study_folder):
     subject_list = glob.glob(study_folder + 'TBI*')
