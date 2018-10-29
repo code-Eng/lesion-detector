@@ -1,15 +1,15 @@
-import nilearn
+
 from nilearn import image
 from nilearn.input_data import NiftiMasker
 import nibabel as nb
 import os
 import numpy as np
-import rena
+from ReNA.rena import ReNA
 import matplotlib.pyplot as plt
 import glob
 
-# Befor run edit the dir_name to the path of your subject; include / at the end
-dir_name = "MRI_ReNA/study_dir/"
+# Before run edit the dir_name to the path of your subject; include / at the end
+dir_name = "/Users/alhussainalmarhabi/PycharmProjects/MRI_ReNA/study_dir/"
 f_len = len(dir_name.split('/'))
 f_len = f_len - 2
 
@@ -18,16 +18,15 @@ nifti_masker = NiftiMasker(mask_img=mask_img, smoothing_fwhm=False,
                            standardize=False)
 nifti_masker.fit()'''
 
-# using subject TBI_INVDD132CG0 FLAIR as masker for all data
-nifti_masker = NiftiMasker(smoothing_fwhm=False,
+'''# using subject TBI_INVDD132CG0 FLAIR as masker for all data
+nifti_masker = NiftiMasker( smoothing_fwhm=False,
                            standardize=False)
-nifti_masker.fit('MRI_ReNA/study_dir/TBI_INVDD132CG0/FLAIR.nii.gz')
+nifti_masker.fit('MRI_ReNA/supporting_data/grey10_icbm_2mm_bin.nii.gz')'''
 
-'''
 mask_img = nb.load('../../../stochastic_regularizer/sergul_aydore/supporting_data/grey10_icbm_2mm_bin.nii.gz')
 nifti_masker = NiftiMasker(mask_img=mask_img, smoothing_fwhm=False,
                            standardize=False)
-nifti_masker.fit()'''
+nifti_masker.fit()
 
 
 def subject_checker(study_folder):
@@ -78,7 +77,7 @@ all_imgs = None
 # checker include only the subject with T1,T2 and FLAIR MRI data
 subject_list = subject_checker(dir_name)
 # print(subject_list) # just to chekc we have the right subject
-print(subject_list)
+
 for subject_name in subject_list:
 
     file_name = subject_name
@@ -94,7 +93,9 @@ print('all images concatenate shape is ', all_imgs.shape, '\n')
 n_voxels = all_imgs.shape[1]
 n_samples = all_imgs.shape[0]
 n_clusters = int(20 * n_voxels / 100)
-cluster = rena.ReNA(scaling=True,
+
+# Apply ReNA - unsupervised algorithm
+cluster = ReNA(scaling=True,
                     n_clusters=n_clusters,
                     masker=nifti_masker)
 
@@ -108,6 +109,8 @@ reduced_images = cluster.transform(all_imgs)
 reconstructed_images = cluster.inverse_transform(reduced_images)
 
 mse = np.mean(abs(all_imgs - reconstructed_images) ** 2, axis=1)
+a_relative_chg = np.array(abs(all_imgs - reconstructed_images) / abs(all_imgs))
+se = np.array(abs(all_imgs - reconstructed_images) ** 2)
 
 labels_plot = []
 for labels_p in subject_list:
@@ -116,20 +119,38 @@ for labels_p in subject_list:
     # ../../sample_data/TBI*/*  >>> 0/1/2/3/4
     # use f_len here
     for c in c_list:
-        if c.split('/')[f_len + 2][0:2] == 'T1':
+        if c.split('/')[f_len + 2] == 'T1.nii.gz':
             labels_plot.append(c.split('/')[f_len + 1] + '-' + c.split('/')[f_len + 2][0:2])
     for c in c_list:
-        if c.split('/')[f_len + 2][0:2] == 'T2':
+        if c.split('/')[f_len + 2] == 'T2.nii.gz':
             labels_plot.append(c.split('/')[f_len + 1] + '-' + c.split('/')[f_len + 2][0:2])
     for c in c_list:
-        if c.split('/')[f_len + 2][0:2] == 'FL':
+        if c.split('/')[f_len + 2] == 'FLAIR.nii.gz':
             labels_plot.append(c.split('/')[f_len + 1] + '-' + c.split('/')[f_len + 2][0:2])
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.plot(mse, marker='o')
 ax.set_xticks(range(n_samples))
-ax.set_xticklabels(labels_plot, rotation=70)
+ax.set_xticklabels(labels_plot, rotation=90)
 ax.set_ylabel("MSE")
+plt.tight_layout()
+
+
+
+labels_plot2 = []
+for labels_p in subject_list:
+    labels_plot2.append(labels_p.split('/')[f_len+1])
+
+#labels_plot2 = np.array(labels_plot2)
+mse1 = np.array([(sum(mse[i:i+3]))/3 for i in range(0,len(mse),3)])
+nn_samples = int(n_samples/3)
+
+fig = plt.figure()
+ax1 = fig.add_subplot(111)
+ax1.plot(mse1, marker='o')
+ax1.set_xticks(range(nn_samples))
+ax1.set_xticklabels(labels_plot2, rotation=90)
+ax1.set_ylabel("Average MSE for three images per subject")
 plt.tight_layout()
 plt.show()
